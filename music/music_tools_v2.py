@@ -170,7 +170,8 @@ filtered_by_key = df[df['Key'] == key_query]
 #print(filtered_by_key)
 
 # Define the base path to filter locations
-base_path = 'file://localhost/Users/xaviergonzalez/Library/Mobile%20Documents/com~apple~CloudDocs/Desktop/9216%20TIMMD/music/sample_audio/'
+#base_path = 'file://localhost/Users/xaviergonzalez/Library/Mobile%20Documents/com~apple~CloudDocs/Desktop/9216%20TIMMD/music/sample_audio/'
+base_path = './sample_audio/'
 
 # Filter the track_df to include only those locations within the base_path and its subfolders
 filtered_track_df = track_df[track_df['Location'].str.startswith(base_path)]

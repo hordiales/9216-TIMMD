@@ -222,10 +222,12 @@ class AudioProcessor:
             fade_out = segment_32_48.fade(from_gain=0, to_gain=-60, start=0, duration=duration_16_beats)
             transition = fade_out.overlay(fade_in, position=0)
             
-            fade_in_file = os.path.join(output_path, f'{track_name}_fade_in.mp3')
-            fade_out_file = os.path.join(output_path, f'{track_name}_fade_out.mp3')
-            fade_in.export(fade_in_file, format="mp3")
-            fade_out.export(fade_out_file, format="mp3")
+            # if you want to save the fades (debugging)
+            #fade_in_file = os.path.join(output_path, f'{track_name}_fade_in.mp3')
+            #fade_out_file = os.path.join(output_path, f'{track_name}_fade_out.mp3')
+            #fade_in.export(fade_in_file, format="mp3")
+            #fade_out.export(fade_out_file, format="mp3")
+            
             # Create the looped segment
             audio_loop = transition + segment_16_32
             
@@ -270,11 +272,6 @@ class AudioProcessor:
                 audio_loop.export(output_file, format="wav")
             print(f'Looped segment saved to {output_file}')
 
-
-        #output_file = os.path.join(output_path, f'{track_name}_segment.mp3')
-        audio_loop.export(output_file, format="mp3")
-        print(f'Segment saved to {output_file}')
-
     @staticmethod
     def parse_rekordbox_xml(xml_path):
         tree = ET.parse(xml_path)
@@ -309,9 +306,9 @@ if __name__ == "__main__":
 
     print("WARNING: artist_catalogue hardcodeado")
 
-    spotify_handler.save_artist_track_data('Tomas Heredia')  # Example usage
-    spotify_handler.save_artist_sample_audio('Tomas Heredia', 'sample_output')  # Example usage
-"""
+    #spotify_handler.save_artist_track_data('Tomas Heredia')  # Example usage
+    #spotify_handler.save_artist_sample_audio('Tomas Heredia', 'sample_output')  # Example usage
+
     # Parse XML and read CSV files
     base_path = 'TIMMD/music/sample_audio/'
     xml_path = 'rekordbox/collection.xml'
@@ -333,14 +330,15 @@ if __name__ == "__main__":
     # Get the file names
     file_names = matching_tracks['Name']
     #track_name = 'spotify-track-7GNBiHP71dMz18dCIksjSB'
-    output_path = 'sample_audio/loops'  # Replace with your desired output directory
+    output_path = 'sample_audio/loops_wav'  # Replace with your desired output directory
     adjustment = -0.05  # Adjust this value as needed
+    
     
     for f in file_names:
         print(f)
         audio_processor.extract_segment(f, output_path, adjustment, looped=True)
-
-"""
-
+    
+    process_audio_files(directory='sample_audio/loops_wav', track_metadata_csv='track_metadata.csv', 
+        output_csv='loops_metadata_wav.csv')
 
 

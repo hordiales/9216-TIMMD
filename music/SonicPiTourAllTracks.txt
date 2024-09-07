@@ -1,0 +1,131 @@
+use_osc "127.0.0.1", 12000
+require 'csv'
+solenoids = "Users/xaviergonzalez/Documents/Repos/dji/loops_and_sources_v3/"
+bpm = 122
+use_bpm bpm
+n_beats = 32
+loops = CSV.parse(File.read("/Users/xaviergonzalez/Documents/repos/dji/loops_marsh.csv"), headers: true)
+print(loops)
+tracks = [150, 155]
+
+note = 0
+velocity = 0
+
+amp_dict = {}
+
+live_loop:midi_control do
+  chan, amplitude = sync "/midi:midi_mix:1/control_change"
+  amp_dict = amp_dict.merge({chan => amplitude/127.0})
+end
+
+live_loop:midi_control_2 do
+  note, intensity = sync "/midi:midi_mix:1/note_on"
+  if (note == 25)
+    #print(step)
+  end
+  if (note == 26)
+    #print(note)
+  end
+end
+
+next_step = 'ft_drums'
+step = 'full'
+
+
+live_loop:hh do
+  note = 0
+  osc "/hello/world"
+  print(tracks[0])
+  track0 = loops[tracks[0]+2]['trackName']
+  track0_b = loops[tracks[0]]['trackName']
+  track0_d = loops[tracks[0]+1]['trackName']
+  track0_o = loops[tracks[0]+3]['trackName']
+  track0_v = loops[tracks[0]+4]['trackName']
+  
+  track1 = loops[tracks[1]+2]['trackName']
+  track1_b = loops[tracks[1]]['trackName']
+  track1_d = loops[tracks[1]+2]['trackName']
+  track1_o = loops[tracks[1]+3]['trackName']
+  track1_v = loops[tracks[1]+4]['trackName']
+  
+  trackl_v = loops[tracks[0]-1]['trackName']
+  
+  bpm0 = loops[tracks[0]]['bpm']
+  bpm1 = loops[tracks[1]]['bpm']
+  bpml = loops[tracks[0]-1]['bpm']
+  
+  if (step == 'full')
+    print('Playing 0 )', loops[tracks[0]]['name'],loops[tracks[0]]['artist'],loops[tracks[0]]['bpm'],loops[tracks[0]]['tonality'])
+    print('Muted 1 )', loops[tracks[1]]['name'],loops[tracks[1]]['artist'],loops[tracks[1]]['bpm'],loops[tracks[1]]['tonality'])
+    #play track0]
+    print (solenoids + '/' + track0_d)
+    sample solenoids + '/' + track0_d, rate: bpm/bpm0.to_f, amp: amp_dict[19]
+    sample solenoids + '/' + track0_o, rate: bpm/bpm0.to_f, amp: amp_dict[23]
+    sample solenoids + '/' + track0_b, rate: bpm/bpm0.to_f, amp: amp_dict[27]
+    sample solenoids + '/' + track0_v, rate: bpm/bpm0.to_f, amp: amp_dict[31]
+    
+    #plain vocal -1
+    sample solenoids + '/' + trackl_v, rate: bpm/bpml.to_f, amp: amp_dict[31]
+    next_step = 'ft_drums'
+  end
+  if (step == 'ft_drums')
+    print('mix drums 0->: ',loops[tracks[0]]['name'],loops[tracks[0]]['artist'],loops[tracks[0]]['bpm'],loops[tracks[0]]['tonality'])
+    print('mix drums 1<-: ',loops[tracks[1]]['name'],loops[tracks[1]]['artist'],loops[tracks[1]]['bpm'],loops[tracks[1]]['tonality'])
+    
+    #plain others bass vocals
+    sample solenoids + '/' + track0_o, rate: bpm/bpm0.to_f, amp: amp_dict[23]
+    sample solenoids + '/' + track0_b, rate: bpm/bpm0.to_f, amp: amp_dict[27]
+    sample solenoids + '/' + track0_v, rate: bpm/bpm0.to_f, amp: amp_dict[31]
+    
+    #plain vocal -1
+    sample solenoids + '/' + trackl_v, rate: bpm/bpml.to_f, amp: amp_dict[31]
+    
+    with_fx:hpf, cutoff: 1 do |fx|
+      control fx, cutoff_slide: n_beats, cutoff: 129
+      sample solenoids + '/' + track0_d, rate: bpm/bpm0.to_f, amp: amp_dict[19]
+    end
+    
+    #play track0
+    with_fx:lpf, cutoff: 2 do |fx3|
+      control fx3, cutoff_slide: n_beats, cutoff: 130
+      sample solenoids + '/'+ track1_d, rate: bpm/bpm1.to_f, amp: amp_dict[19]
+    end
+    next_step = 'ft_bass'
+  end
+  if (step == 'ft_bass')
+    print('mix bass 0->: ',loops[tracks[0]]['name'],loops[tracks[0]]['artist'],loops[tracks[0]]['bpm'],loops[tracks[0]]['tonality'])
+    print('mix bass 1<-: ',loops[tracks[1]]['name'],loops[tracks[1]]['artist'],loops[tracks[1]]['bpm'],loops[tracks[1]]['tonality'])
+    
+    sample solenoids + '/' + track0_v, rate: bpm/bpm0.to_f, amp: amp_dict[31]
+    #plain drums 1
+    sample solenoids + '/' + track1_d, rate: bpm/bpm1.to_f, amp: amp_dict[19]
+    
+    with_fx:hpf, cutoff: 1 do |fx|
+      control fx, cutoff_slide: n_beats, cutoff: 129
+      
+      sample solenoids + '/' + track0_o, rate: bpm/bpm0.to_f, amp: amp_dict[23]
+      sample solenoids + '/' + track0_b, rate: bpm/bpm0.to_f, amp: amp_dict[27]
+      
+      
+      #plain vocal -1
+      sample solenoids + '/' + trackl_v, rate: bpm/bpml.to_f, amp: amp_dict[31]
+      
+      
+    end
+    #play track0
+    with_fx:lpf, cutoff: 2 do |fx3|
+      control fx3, cutoff_slide: n_beats, cutoff: 130
+      sample solenoids + '/'+ track1_o, rate: bpm/bpm1.to_f, amp: amp_dict[23]
+      sample solenoids + '/'+ track1_b, rate: bpm/bpm1.to_f, amp: amp_dict[27]
+      sample solenoids + '/' + track1_v, rate: bpm/bpm1.to_f, amp: amp_dict[31]
+    end
+    next_step = 'full'
+    #transition
+    tracks[0] = tracks[1]
+    tracks[1] = tracks[1] + 5
+    
+  end
+  
+  step = next_step
+  sleep 32
+end# Welcome to Sonic Pi

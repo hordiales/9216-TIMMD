@@ -174,11 +174,13 @@ filtered_by_key = df[df['Key'] == key_query]
 base_path = './sample_audio/'
 
 # Filter the track_df to include only those locations within the base_path and its subfolders
-filtered_track_df = track_df[track_df['Location'].str.startswith(base_path)]
+filtered_track_df = track_df #[base_path in track_df['Location']]
+
 def calculate_duration(beats, bpm):
     return (60 / bpm) * beats
 
 def extract_segment(track_name, output_path, adjustment=0.0):
+    
     # Find the track ID from the track name in the filtered dataframe
     track_info = filtered_track_df[filtered_track_df['Name'] == track_name]
     if track_info.empty:
@@ -210,15 +212,15 @@ def extract_segment(track_name, output_path, adjustment=0.0):
     segment = audio[start_time_ms:end_time_ms]
 
     # Export the segment
-    output_file = os.path.join(output_path, f'{track_name}_segment.mp3')
-    segment.export(output_file, format="mp3")
+    output_file = os.path.join(output_path, f'{track_name}_segment.wav')
+    segment.export(output_file, format="wav")
     print(f'Segment saved to {output_file}')
 
 # Example usage
 
-#track_name = 'spotify-track-1oBrF9K3oXROnWhov5dDQk'  # Replace with the track name you want to process
-track_name = 'spotify-track-1cgKW6P31HXhlspXNWSFiP'
-output_path = ''  # Replace with your desired output directory
+track_name = 'spotify-track-1oBrF9K3oXROnWhov5dDQk'  # Replace with the track name you want to process
+#track_name = 'spotify-track-1cgKW6P31HXhlspXNWSFiP'
+output_path = 'delete'  # Replace with your desired output directory
 adjustment = -0.05  # Adjust this value as needed
 extract_segment(track_name, output_path, adjustment)
 

@@ -73,75 +73,77 @@ class SpotifyHandler:
         self.sp = spotipy.Spotify(client_credentials_manager=self.client_credentials_manager)
 
 
-        self.artist_catalogue = {
-            'Tomas Heredia': '0MxxbjQyul7WXUFy0O6qiu',
-            'Hernan Cattaneo': '4mpJaw5y17CIN08qqe8EfB',
-            'Marsh': '1eucLGnPT27tdEh6MU29wp',
-            'Tinlicker': '5EmEZjq8eHEC6qFnT63Lza',
-            'Robin S': '2WvLeseDGPX1slhmxI59G3',
-            'Janice Robinson': '6BXTl7YkINlCQkkzE9hvCd'
-        }
+        self.artist_catalogue = {'Angeles Azules': '0ZCO8oVkMj897cKgFH7fRW',
+                    'Los Mirlos':'1ga48mxYYI9RuUrWLa3voh',
+                    'Antonio Rios':'7s652lD4v77szrPEfgMTBi'}
 
-    def save_artist_track_data(self, artist):
-        artist_uri = self.artist_catalogue[artist]
+
+    def save_artist_track_data(self,artist):
+        birdy_uri = self.artist_catalogue[artist]
         artist_folder = Path('track_data') / artist
         artist_folder.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            # Get albums
+            results = self.sp.artist_albums(birdy_uri, album_type='album')
+            albums = results['items']
+            while results['next']:
+                results = self.sp.next(results)
+                albums.extend(results['items'])
+            
+            # Get singles
+            results_singles = self.sp.artist_albums(birdy_uri, album_type='single')
+            singles = results_singles['items']
+            while results_singles['next']:
+                results_singles = self.sp.next(results_singles)
+                singles.extend(results_singles['items'])
+            
+            all_releases = albums + singles
+            
+            # Get album tracks and save track data
+            track_list_singles = []
+            for release in all_releases:
+                results = self.sp.album_tracks(release['id'])
+                track_list_singles.extend(results['items'])
+                while results['next']:
+                    results = self.sp.next(results)
+                    track_list_singles.extend(results['items'])
+            
+            # Save to JSON
+            with open(artist_folder / f'{birdy_uri}.json', 'w') as handle:
+                json.dump(track_list_singles, handle, indent=4)
+        
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
-        results = self.sp.artist_albums(artist_uri, album_type='album')
-        albums = results['items']
-        while results['next']:
-            results = self.sp.next(results)
-            albums.extend(results['items'])
-
-        results_singles = self.sp.artist_albums(artist_uri, album_type='single')
-        singles = results_singles['items']
-        while results_singles['next']:
-            results_singles = self.sp.next(results_singles)
-            singles.extend(results_singles['items'])
-
-        all_releases = albums + singles
-
-        for release in all_releases:
-            album_id = release['id']
-            album_name = release['name']
-            album_folder = artist_folder / album_name
-            album_folder.mkdir(parents=True, exist_ok=True)
-
-            tracks = self.sp.album_tracks(album_id)
-            track_data = []
-            for track in tracks['items']:
-                track_info = {
-                    'track_name': track['name'],
-                    'track_id': track['id'],
-                    'track_uri': track['uri']
-                }
-                track_data.append(track_info)
-
-            with open(album_folder / 'track_data.json', 'w') as f:
-                json.dump(track_data, f, indent=4)
-
-    def save_artist_sample_audio(self, artist, output_folder, duration=30):
-        artist_uri = self.artist_catalogue[artist]
-        artist_folder = Path(output_folder) / artist
+    def save_artist_sample_audio(self, artist):
+        birdy_uri = self.artist_catalogue[artist]
+        artist_folder = Path('sample_audio') / artist
         artist_folder.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            # Load track data from JSON
+            print(Path('track_data') / artist / f'{birdy_uri}.json')
+            with open(Path('track_data') / artist / f'{birdy_uri}.json', 'r') as handle:
+                track_list = json.load(handle)
+            
+            for track in track_list:
+                url = track.get('preview_url')
+                if url:
+                    try:
+                        response = requests.get(url)
+                        response.raise_for_status()
+                        with open(artist_folder / f'{track["uri"].replace(":", "-")}.mp3', 'wb') as f:
+                            f.write(response.content)
+                        print(f"Downloaded {track['preview_url']}")
+                    except requests.RequestException as e:
+                        print(f"Failed to download {url}: {e}")
+        
+        except FileNotFoundError:
+            print(f"JSON file not found for artist {artist}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
-        results = self.sp.artist_top_tracks(artist_uri)
-        top_track = results['tracks'][0]
-
-        track_id = top_track['id']
-        track_name = top_track['name']
-        track_preview_url = top_track['preview_url']
-
-        if track_preview_url:
-            audio_data = requests.get(track_preview_url).content
-            audio_segment = AudioSegment.from_file(io.BytesIO(audio_data), format="mp3")
-
-            sample_segment = audio_segment[:duration * 1000]
-            output_file = artist_folder / f"{track_name}_sample.mp3"
-            sample_segment.export(output_file, format="mp3")
-            print(f'Sample audio saved to {output_file}')
-        else:
-            print(f'No preview available for track: {track_name}')
 
 
 class AudioProcessor:
@@ -306,39 +308,45 @@ if __name__ == "__main__":
 
     print("WARNING: artist_catalogue hardcodeado")
 
-    #spotify_handler.save_artist_track_data('Tomas Heredia')  # Example usage
-    #spotify_handler.save_artist_sample_audio('Tomas Heredia', 'sample_output')  # Example usage
+        # self.artist_catalogue = {'Angeles Azules': '0ZCO8oVkMj897cKgFH7fRW',
+        #             'Los Mirlos':'1ga48mxYYI9RuUrWLa3voh',
+        #             'Antonio Rios':'7s652lD4v77szrPEfgMTBi'}
 
-    # Parse XML and read CSV files
-    base_path = 'TIMMD/music/sample_audio/'
-    xml_path = 'rekordbox/collection.xml'
-    track_df = AudioProcessor.parse_rekordbox_xml(xml_path)
-    #track_df[track_df['Location'].str.startswith(base_path)]
-    tempo_csv_path = 'tempo_metadata.csv'
-    tempo_df = AudioProcessor.read_csv(tempo_csv_path)
 
-    # Create an AudioProcessor instance
-    audio_processor = AudioProcessor(base_path, track_df, tempo_df)
-    # Example extraction
-    #track_name = 'spotify-track-0tvaWhHlhewQ6ovIwn6wnX'  # Replace with the track name you want to process
-    # Find all tracks that meet the criteria
-    lower_bpm = 120
-    upper_bpm = 124
-    matching_tracks = tempo_df.groupby('TrackID').filter(lambda x: len(x) == 1)
-    matching_tracks = matching_tracks[(matching_tracks['Bpm'] >= lower_bpm) & (matching_tracks['Bpm'] <= upper_bpm)]
-    matching_tracks = matching_tracks[matching_tracks['Name'].str.startswith('spotify-track-')]
-    # Get the file names
-    file_names = matching_tracks['Name']
-    #track_name = 'spotify-track-7GNBiHP71dMz18dCIksjSB'
-    output_path = 'sample_audio/loops_wav'  # Replace with your desired output directory
-    adjustment = -0.05  # Adjust this value as needed
+    spotify_handler.save_artist_track_data('Angeles Azules')  # Example usage
+    spotify_handler.save_artist_sample_audio('Angeles Azules')  # Example usage
+
+
+    # # Parse XML and read CSV files
+    # base_path = 'TIMMD/music/sample_audio/'
+    # xml_path = 'rekordbox/collection.xml'
+    # track_df = AudioProcessor.parse_rekordbox_xml(xml_path)
+    # #track_df[track_df['Location'].str.startswith(base_path)]
+    # tempo_csv_path = 'tempo_metadata.csv'
+    # tempo_df = AudioProcessor.read_csv(tempo_csv_path)
+
+    # # Create an AudioProcessor instance
+    # audio_processor = AudioProcessor(base_path, track_df, tempo_df)
+    # # Example extraction
+    # #track_name = 'spotify-track-0tvaWhHlhewQ6ovIwn6wnX'  # Replace with the track name you want to process
+    # # Find all tracks that meet the criteria
+    # lower_bpm = 120
+    # upper_bpm = 124
+    # matching_tracks = tempo_df.groupby('TrackID').filter(lambda x: len(x) == 1)
+    # matching_tracks = matching_tracks[(matching_tracks['Bpm'] >= lower_bpm) & (matching_tracks['Bpm'] <= upper_bpm)]
+    # matching_tracks = matching_tracks[matching_tracks['Name'].str.startswith('spotify-track-')]
+    # # Get the file names
+    # file_names = matching_tracks['Name']
+    # #track_name = 'spotify-track-7GNBiHP71dMz18dCIksjSB'
+    # output_path = 'sample_audio/loops_wav'  # Replace with your desired output directory
+    # adjustment = -0.05  # Adjust this value as needed
     
     
-    for f in file_names:
-        print(f)
-        audio_processor.extract_segment(f, output_path, adjustment, looped=True)
+    # for f in file_names:
+    #     print(f)
+    #     audio_processor.extract_segment(f, output_path, adjustment, looped=True)
     
-    process_audio_files(directory='sample_audio/loops_wav', track_metadata_csv='track_metadata.csv', 
-        output_csv='loops_metadata_wav.csv')
+    #process_audio_files(directory='sample_audio/loops_wav', track_metadata_csv='track_metadata.csv', 
+    #    output_csv='loops_metadata_wav.csv')
 
 

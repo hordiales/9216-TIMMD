@@ -313,8 +313,8 @@ if __name__ == "__main__":
         #             'Antonio Rios':'7s652lD4v77szrPEfgMTBi'}
 
 
-    # spotify_handler.save_artist_track_data('Angeles Azules')  # Example usage
-    # spotify_handler.save_artist_sample_audio('Angeles Azules')  # Example usage
+    spotify_handler.save_artist_track_data('Angeles Azules')  # Example usage
+    spotify_handler.save_artist_sample_audio('Angeles Azules')  # Example usage
 
     spotify_handler.save_artist_track_data('Los Mirlos')  # Example usage
     spotify_handler.save_artist_sample_audio('Los Mirlos')  # Example usage
